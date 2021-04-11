@@ -1,0 +1,313 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <script src="../Scripts/jquery-3.4.1.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script src="../Scripts/ajaxCalls.js"></script>
+    <link href="MyStyleSheet.css" rel="stylesheet" />
+   
+    <script>
+        $(document).ready(function () {
+
+            ajaxCall("GET", "../api/Events/getevent", "", getSuccessAlleventstype, error);
+            $("#EventType").change(getevname);
+            $("#addeventname").hide();
+
+            $("#addtypeeventtext").hide();
+            $('#buttoneventtype').hide();
+
+            $("#addnameventtext").hide();
+            $('#buttoneventname').hide();
+
+            $("#pForm").submit(f1); // bind the submit event to a function called f1
+            picName = "";
+
+            $('#buttonUpload').on('click', function () {
+                var data = new FormData();
+                var files = $("#files").get(0).files;
+
+                // Add the uploaded file to the form data collection
+                if (files.length > 0) {
+                    for (f = 0; f < files.length; f++) {
+                        data.append("UploadedImage", files[f]);
+                    }
+                    data.append("Imagename", new Date()); // append what ever data you want to send along with the files. See how you extract it in the controller.
+                }
+
+
+                // Ajax upload
+                $.ajax({
+                    type: "POST",
+                    url: "../Api/ImageUpload",
+                    contentType: false,
+                    processData: false,
+                    data: data,
+                    success: showImages,
+                    error: error
+                });
+
+                return false;
+            });
+
+        });
+
+        function showImages(data) {
+            console.log(data);
+            dataa = data;
+            var imgStr = "";
+            imgStr += "<img src='../" + data + "'/>";
+
+            document.getElementById("ph").innerHTML = imgStr;
+            picName = dataa[0];
+
+        }
+
+
+        function AddEvent() {
+            // createa a JSON object called customer
+            Event = { // Note that the name of the fields must be identical to the names of the properties of the object in the server
+
+                Eventtype: $("#EventType :selected").text(),
+                Eventname: $("#EventName :selected").text(),
+                EventDate: $("#datedis").val(),
+                EventText: $("#content").val(),
+                EventImage: picName,
+            //    ParticipantQu: 0,
+            }
+            ajaxCall("POST", "../api/Events/addevent", JSON.stringify(Event), inserteventsuccess, errorr);
+
+
+        }
+
+        // This function is called in case of a success
+        function inserteventsuccess(data) {
+            console.log(data);
+            swal({ title: "!האירוע נוסף בהצלחה", icon: "success" })
+            $("#EventType").val("");
+            $("#EventName").val("");
+            $("#datedis").val("");
+            $("#content").val("");
+            $("#files").val(null);
+            $("#ph").remove();
+            picName = "";
+            $("#addtypeeventtext").hide();
+            $("#addnameventtext").hide();
+            $("#buttoneventname").hide();
+            $("#buttoneventtype").hide();
+        }
+
+        // This function is called in case of an error
+        function errorr(err) {
+            console.log(err.responseJSON);
+            alert("Something is wrong");
+
+        }
+
+        function f1() {
+            AddEvent();
+
+            return false; // the return false will prevent the form from being submitted
+            // hence the page will not reload
+        }
+
+        function getSuccessAlleventstype(allevtype) {
+            console.log(allevtype);
+            Allevtype = allevtype;
+            str = "";
+            for (var i = 0; i < Allevtype.length; i++) {
+                str += "<option value='" + i + "'>" + Allevtype[i].Eventtype + "</option></br>";
+
+            }
+            document.getElementById("EventType").innerHTML += str;
+        }
+
+
+        function getevname() {
+            $("#addeventname").show();
+
+            evtypename = $("#EventType :selected").text();
+            let api = "../api/Events/getsametype?evtypename=" + evtypename;
+            ajaxCall("GET", api, "", getSuccessevname, error);
+        }
+
+        function getSuccessevname(allevname) {
+
+            console.log(allevname);
+            Allevname = allevname;
+            let str = "";
+            for (var i = 0; i < Allevname.length; i++) {
+                str += "<option value='" + i + "'>" + Allevname[i] + "</option></br>";
+
+            }
+
+            document.getElementById("EventName").innerHTML = str;
+
+        }
+
+        function addbutton(number) {
+            document.getElementById('addtypeeventtext').value = '';
+            document.getElementById('addnameventtext').value = '';
+
+            if (number == 1) {
+
+                $("#addtypeeventtext").show();
+                $('#buttoneventtype').show();
+
+            }
+            else {
+                $("#addnameventtext").show();
+                $('#buttoneventname').show();
+
+            }           
+
+        }
+
+        function Inserteventtypetolist() {
+            if ($("#addtypeeventtext").val() == "")
+                swal({ icon: 'error', title: 'Sorry', text: "!יש להזין סוג אירוע" })
+            else {
+                let addeventtypee = {
+                    Eventtype: $("#addtypeeventtext").val()
+                }
+                ajaxCall("POST", "../api/Events/addeventtype", JSON.stringify(addeventtypee), inserteventtypesuccess, erroreventtype);
+            }
+        }
+
+        function inserteventtypesuccess(data) {
+            console.log(data);
+            ajaxCall("GET", "../api/Events/getevent", "", getSuccessAllneweventstypee, error);
+        }
+
+        function getSuccessAllneweventstypee(allevtype) {
+            console.log(allevtype);
+            $("#EventType").empty();
+            getSuccessAlleventstype(allevtype);
+            swal({ title: "!סוג האירוע נוסף בהצלחה", icon: "success" });
+            $("#addtypeeventtext").hide();
+            $("#buttoneventtype").hide();
+
+        }
+
+
+  
+        function Inserteventnametolist() {
+            if ($("#addnameventtext").val() == "")
+                swal({ icon: 'error', title: 'Sorry', text: "!יש להזין שם אירוע" })
+            else {
+                Allevname.push($("#addnameventtext").val());
+                let addeventnamee = {
+                    Eventtype: $("#EventType :selected").text(),
+                    EventName: Allevname
+                }
+                ajaxCall("POST", "../api/Events/addeventname", JSON.stringify(addeventnamee), inserteventnamesuccess, erroreventname);
+            }
+        }
+
+        function inserteventnamesuccess(data) {
+
+            console.log(data);
+            getevname();
+            swal({ title: "!שם האירוע נוסף בהצלחה", icon: "success" });
+            $("#addnameventtext").hide();
+            $("#buttoneventname").hide();
+
+        }
+
+        function erroreventtype(err) {
+            console.log(err);
+            swal({ icon: 'error', title: 'Sorry', text: "!סוג האירוע כבר קיים" })
+            $("#addtypeeventtext").val("");
+
+
+        }
+        function erroreventname(err) {
+            console.log(err);
+            swal({ icon: 'error', title: 'Sorry', text: "!שם האירוע כבר קיים" })
+            $("#addnameventtext").val("");
+
+        }
+
+
+        function error(err) {
+            console.log(err);
+            alert(err);
+        }
+
+    </script>
+</head>
+
+
+<body>
+    <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <ul class="nav navbar-nav">
+                <li><a href="Ads.html">פרסומים</a></li>
+                <li class="active"><a href="Events.html">ארועים חברתיים</a></li>
+                <li><a href="AdsFeedBack.html">פידבק לפרסומים</a></li>
+                <li><a href="EventsFeedBack.html">פידבק לארועים חברתיים</a></li>
+                <li><a href="EventTB.html">משתתפים באירוע</a></li>
+                <li><a href="Questionnaire.html">שאלונים</a></li>
+                <li id="titleNav"><a id="navT">היחידת ליזמות חברתית</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <form id="pForm">
+            <h2 id="h2">הוספת אירוע חדש</h2>
+
+            <div class="form-group">
+                <label for="EventType" id="EventTypeText">בחירת סוג אירוע</label>
+                <select class="form-control" id="EventType" required>
+                    <option>    </option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="EventName" id="EventNameText">בחירת שם אירוע</label>
+                <select class="form-control" id="EventName" required>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="datedis" id="datedisText">בחירת תאריך אירוע</label>
+                <input type="date" class="form-control" id="datedis" required />
+
+            </div>
+            <div class="form-group">
+                <label for="content" id="contentText"></label>
+                <textarea class="form-control" id="content" placeholder="תוכן האירוע..." required></textarea>
+            </div>
+
+            <div id="uploadddiv">
+                <div id="uploadd">
+                    <label for="files">(העלאת תמונה (אופציונלי</label>
+                    <input type="file" id="files" name="files" />
+                </div>
+                <br />
+                <button type="button" id="buttonUpload">Upload image</button>
+            </div>
+            <input type="submit" value="הפצת אירוע" class="myButton" id="submitt" />
+        </form>
+
+        <div id="addET">
+            <i type="button" id="addeventtype" onclick="addbutton(1)" class="fas fa-plus-circle"></i>
+            <input type="text" id="addtypeeventtext" />
+            <input type="button" value="הוספת סוג אירוע" id="buttoneventtype" onclick="Inserteventtypetolist()" />
+        </div>
+        <div id="addEN">
+            <i type="button" id="addeventname" onclick="addbutton(0)" class="fas fa-plus-circle"></i>
+            <input type="text" id="addnameventtext" />
+            <input type="button" value="הוספת שם אירוע" id="buttoneventname" onclick="Inserteventnametolist()" />
+        </div>
+    </div>
+
+    <div id="ph"></div>
+
+</body>
+</html>

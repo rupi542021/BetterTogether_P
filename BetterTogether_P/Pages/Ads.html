@@ -1,0 +1,318 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <script src="../Scripts/jquery-3.4.1.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script src="../Scripts/ajaxCalls.js"></script>
+    <link href="MyStyleSheet.css" rel="stylesheet" />
+   
+    <script>
+        $(document).ready(function () {
+
+            ajaxCall("GET", "../api/Ads/getsub", "", getSuccessAllsubs, error);
+            $("#SubjName").change(getsubsub);
+            $("#AddSubsub").hide();
+
+            $("#addsubjecttext").hide();
+            $('#buttonaddsubject').hide();
+
+            $("#addsubsubtext").hide();
+            $('#buttonaddsubsub').hide();
+
+
+            $("#pForm").submit(f1); // bind the submit event to a function called f1
+            picName = "";
+
+            $('#buttonUpload').on('click', function () {
+                var data = new FormData();
+                var files = $("#files").get(0).files;
+
+                // Add the uploaded file to the form data collection
+                if (files.length > 0) {
+                    for (f = 0; f < files.length; f++) {
+                        data.append("UploadedImage", files[f]);
+                    }
+                    data.append("Imagename", new Date()); // append what ever data you want to send along with the files. See how you extract it in the controller.
+                }
+
+
+                // Ajax upload
+                $.ajax({
+                    type: "POST",
+                    url: "../Api/ImageUpload",
+                    contentType: false,
+                    processData: false,
+                    data: data,
+                    success: showImages,
+                    error: error
+                });
+
+                return false;
+            });
+
+        });
+
+        function showImages(data) {
+            console.log(data);
+            dataa = data;
+            var imgStr = "";
+            imgStr += "<img src='../" + data + "'/>";
+
+            document.getElementById("ph").innerHTML = imgStr;
+            picName = dataa[0];
+
+        }
+
+
+
+        function AddAd() {
+            // createa a JSON object called customer
+            Ad = { // Note that the name of the fields must be identical to the names of the properties of the object in the server
+
+                Subject: $("#SubjName :selected").text(),
+                SubSubject: $("#SubsubjName :selected").text(),
+                AdsDate: $("#datedis").val(),
+                AdsText: $("#content").val(),
+                AdsImage: picName
+            }
+            ajaxCall("POST", "../api/Ads/addad", JSON.stringify(Ad), success, errorr);
+
+
+        }
+
+        // This function is called in case of a success
+        function success(data) {
+            console.log(data);
+            swal({ title: "!הפרסום נוסף בהצלחה", icon: "success" })
+            $("#SubjName").val("");
+            $("#SubsubjName").val("");
+            $("#datedis").val("");
+            $("#content").val("");
+            $("#files").val(null);
+            $("#ph").remove();
+            picName = "";
+            $("#addsubjecttext").hide();
+            $("#addsubsubtext").hide();
+            $("#buttonaddsubsub").hide();
+            $("#buttonaddsubject").hide();
+
+        }
+
+        // This function is called in case of an error
+        function errorr(err) {
+            console.log(err.responseJSON);
+            alert("Something is wrong");
+
+        }
+
+        function f1() {
+            AddAd();
+
+            return false; // the return false will prevent the form from being submitted
+            // hence the page will not reload
+        }
+
+        function getSuccessAllsubs(allsubs) {
+            console.log(allsubs);
+            Allsubs = allsubs;
+            str = "";
+            for (var i = 0; i < Allsubs.length; i++) {
+                str += "<option value='" + i + "'>" + Allsubs[i].SubName + "</option></br>";
+
+            }
+            document.getElementById("SubjName").innerHTML += str;
+
+
+        }
+
+        function getsubsub() {
+            $("#AddSubsub").show();
+
+            subname = $("#SubjName :selected").text()
+            let api = "../api/Ads/getsamename?subname=" + subname;
+            ajaxCall("GET", api, "", getSuccessSubsubs, error);
+        }
+
+        function getSuccessSubsubs(allsubsub) {
+
+            console.log(allsubsub);
+            Allsubsub = allsubsub;
+            let str = "";
+            for (var i = 0; i < Allsubsub.length; i++) {
+                str += "<option value='" + i + "'>" + Allsubsub[i] + "</option></br>";
+
+            }
+
+            document.getElementById("SubsubjName").innerHTML = str;
+
+        }
+
+        function Addbutton(number) {
+            document.getElementById('addsubjecttext').value = '';
+            document.getElementById('addsubsubtext').value = '';
+
+            if (number == 1) {
+                $("#addsubjecttext").show();
+                $("#buttonaddsubject").show();
+
+            }
+            else {
+                $("#addsubsubtext").show();
+                $("#buttonaddsubsub").show();
+
+            }
+        
+        }
+
+        function Insertsubtolist() {
+           
+            if ($("#addsubjecttext").val() == "")
+             swal({ icon: 'error', title: 'Sorry', text: "!יש להזין נושא" })
+
+            else {
+                let addsubject = {
+                    SubName: $("#addsubjecttext").val()
+                }
+                ajaxCall("POST", "../api/Ads/addsub", JSON.stringify(addsubject), insertsubsuccess, errorsubject);
+            }
+        }
+
+        function insertsubsuccess(data) {
+            console.log(data);
+            ajaxCall("GET", "../api/Ads/getsub", "", getSuccessAllnewsub, error);
+        }
+
+        function getSuccessAllnewsub(allsub) {
+            console.log(allsub);
+            $("#SubjName").empty();
+            getSuccessAllsubs(allsub);
+            swal({ title: "!הנושא נוסף בהצלחה", icon: "success" });
+            $("#addsubjecttext").hide();
+            $("#buttonaddsubject").hide();
+        }
+
+
+        function Insertsubsubtolist() {
+            if ($("#addsubsubtext").val() == "")
+                swal({ icon: 'error', title: 'Sorry', text: "!יש להזין תת נושא" })
+            else {
+                Allsubsub.push($("#addsubsubtext").val());
+
+                let addsubsub = {
+                    SubName: $("#SubjName :selected").text(),
+                    SubSubject: Allsubsub,
+                }
+
+                ajaxCall("POST", "../api/Ads/addsubsub", JSON.stringify(addsubsub), insertsubsubsuccess, errorsubsubject);
+            }
+        }
+
+        function insertsubsubsuccess(data) {
+
+            console.log(data);
+            swal({ title: "!שם התת נושא נוסף בהצלחה", icon: "success" });
+            getsubsub();
+            $("#addsubsubtext").hide();
+            $("#buttonaddsubsub").hide();
+        }
+
+        function errorsubject(err) {
+            console.log(err);
+            swal({ icon: 'error', title: 'Sorry', text: "!הנושא כבר קיים" })
+            $("#addtypeeventtext").val("");
+
+
+        }
+        function errorsubsubject(err) {
+            console.log(err);
+            swal({ icon: 'error', title: 'Sorry', text: "!תת הנושא כבר קיים" })
+            $("#addnameventtext").val("");
+
+        }
+
+        function error(err) {
+            console.log(err);
+            alert(err);
+        }
+
+
+
+    </script>
+</head>
+
+
+<body>
+   <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="Ads.html">פרסומים</a></li>
+                <li><a href="Events.html">ארועים חברתיים</a></li>
+                <li><a href="AdsFeedBack.html">פידבק לפרסומים</a></li>
+                <li><a href="EventsFeedBack.html">פידבק לארועים חברתיים</a></li>
+                <li><a href="EventTB.html">משתתפים באירוע</a></li>
+                <li><a href="Questionnaire.html">שאלונים</a></li>
+                <li id="titleNav"><a id="navT">היחידת ליזמות חברתית</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <form id="pForm">
+            <h2 id="h2">הוספת פרסום חדש</h2>
+
+            <div class="form-group">
+                <label for="SubjName" id="SubjNameText">בחירת נושא</label>
+                <select class="form-control" id="SubjName" required>
+                    <option>    </option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="SubsubjName" id="SubsubjNameText">בחירת תת נושא</label>
+                <select class="form-control" id="SubsubjName" required>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="datedis" id="datedisText">בחירת תאריך פרסום</label>
+                <input type="date" class="form-control" id="datedis" required />
+
+            </div>
+            <div class="form-group">
+                <label for="content" id="contentText"></label>
+                <textarea class="form-control" id="content" placeholder="תוכן הפרסום..." required></textarea>
+            </div>
+
+            <div id="uploadddiv">
+                <div id="uploadd">
+                    <label for="files">(העלאת תמונה (אופציונלי</label>
+                    <input type="file" id="files" name="files" />
+                </div>
+                <br />
+                <button type="button" id="buttonUpload">Upload image</button>
+            </div>
+            <input type="submit" value="הפצת פרסום" class="myButton" id="submitt" />
+        </form>
+
+        <div id="addS">
+            <i type="button" id="addsubject" onclick="Addbutton(1)" class="fas fa-plus-circle"></i>
+            <input type="text" id="addsubjecttext" />
+            <input type="button" value="הוספת נושא" id="buttonaddsubject" onclick="Insertsubtolist()" />
+        </div>
+        <div id="addSS">
+            <i type="button" id="AddSubsub" onclick="Addbutton(0)" class="fas fa-plus-circle"></i>
+            <input type="text" id="addsubsubtext" />
+            <input type="button" value="הוספת תת נושא" id="buttonaddsubsub" onclick="Insertsubsubtolist()" />
+        </div>
+
+    </div>
+    <div id="ph"></div>
+
+</body>
+</html>
